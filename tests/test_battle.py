@@ -164,6 +164,55 @@ def test_battle_two_units(infantry_unit, fighter_unit):
     assert sorted(results, key=results.__getitem__)[-5].defenders == ()
 
 
+def test_battle_cost(infantry_unit, fighter_unit):
+    """Tests a battle with two units to get the expect costs."""
+    setup = units.BattleSetup(
+        battlefield="land",
+        attackers=(infantry_unit, infantry_unit),
+        defenders=(fighter_unit, fighter_unit),
+    )
+    costs = battle.get_expected_costs(setup)
+    assert 0 < costs["attacker"] < setup.attacker_ipc
+    assert 0 < costs["defender"] < setup.defender_ipc
+
+
+def test_battle_odds(infantry_unit, fighter_unit):
+    """Tests a battle with two units to get the expect costs."""
+    setup = units.BattleSetup(
+        battlefield="land",
+        attackers=(infantry_unit, infantry_unit),
+        defenders=(fighter_unit, fighter_unit),
+    )
+    odds = battle.get_winning_odds(setup)
+    assert 0 < odds["attacker"] < 1
+    assert 0 < odds["defender"] < 1
+    assert 0 < odds["draw"] < 1
+    assert is_close(sum(odds.values()), 1)
+
+
+def test_clear_battle_odds(transport_unit, fighter_unit):
+    """Tests a battle with two units to get the expect costs."""
+    setup = units.BattleSetup(
+        battlefield="land",
+        attackers=(fighter_unit, fighter_unit),
+        defenders=(transport_unit, transport_unit),
+    )
+    odds = battle.get_winning_odds(setup)
+    assert odds["attacker"] == 1
+    assert odds["defender"] == 0
+    assert odds["draw"] == 0
+
+    setup = units.BattleSetup(
+        battlefield="land",
+        attackers=(transport_unit, transport_unit),
+        defenders=(transport_unit,),
+    )
+    odds = battle.get_winning_odds(setup)
+    assert odds["attacker"] == 0
+    assert odds["defender"] == 0
+    assert odds["draw"] == 1
+
+
 def is_close(a, b):
     """Checks if two values are close"""
     return abs(a - b) < 1e5

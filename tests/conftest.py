@@ -29,6 +29,18 @@ def infantry_unit():
 
 
 @pytest.fixture()
+def transport_unit():
+    """A fighter unit"""
+    return units.Unit(
+        name="Transport",
+        ipc_value=7,
+        attack_strength=0,
+        defense_strength=0,
+        required_hits=1,
+    )
+
+
+@pytest.fixture()
 def tank_unit():
     """A fighter unit"""
     return units.Unit(

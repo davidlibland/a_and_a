@@ -1,5 +1,6 @@
 """The logic around a battle"""
 from typing import Mapping
+from typing import List
 from typing import Counter
 from typing import Tuple
 import collections
@@ -100,7 +101,9 @@ def take_cheapest_hits(n: int, *units: a_units.Unit) -> Tuple[a_units.Unit, ...]
     """Takes the cheapest hit from the given units."""
     if n == 0 or not units:
         return tuple(units)
-    cheapest_unit, *others = sorted(units, key=lambda unit: unit.hits_cost(1))
+    cheapest_unit, *others = sorted(
+        units, key=lambda unit: (not unit.non_combatant, unit.hits_cost(1))
+    )
     hit_unit = cheapest_unit.take_hits(1)
     if hit_unit is None:
         return take_cheapest_hits(n - 1, *others)
@@ -118,6 +121,12 @@ def compute_battle_results(
     if not setup.attackers or not setup.defenders:
         final_result[setup] += 1
         return final_result
+    if (
+        sum(a.attack_strength for a in setup.attackers) == 0
+        and sum(a.defense_strength for a in setup.defenders) == 0
+    ):
+        final_result[setup] += 1
+        return final_result
     next_results = battle_steps[setup]
     while next_results:
         next_setup = sorted(
@@ -131,3 +140,35 @@ def compute_battle_results(
 
 
 battle_results = LazyResult(result_constructor=compute_battle_results)
+
+
+def get_expected_costs(setup: a_units.BattleSetup) -> Mapping[str, float]:
+    """Returns a histogram of the expected costs."""
+    results = battle_results[setup]
+    attacker_final_ipc = 0
+    defender_final_ipc = 0
+    for outcome, odds in results.items():
+        attacker_final_ipc += outcome.attacker_ipc * odds
+        defender_final_ipc += outcome.defender_ipc * odds
+    return {
+        "attacker": setup.attacker_ipc - attacker_final_ipc,
+        "defender": setup.defender_ipc - defender_final_ipc,
+    }
+
+
+def get_winning_odds(setup: a_units.BattleSetup) -> Mapping[str, float]:
+    """Returns a histogram of the expected costs."""
+    results = battle_results[setup]
+    attacker_odds = 0
+    defender_odds = 0
+    draw = 0
+    for outcome, odds in results.items():
+        if outcome.attackers and outcome.defenders:
+            draw += odds
+        elif outcome.attackers and not outcome.defenders:
+            attacker_odds += odds
+        elif not outcome.attackers and outcome.defenders:
+            defender_odds += odds
+        elif not outcome.attackers and not outcome.defenders:
+            draw += odds
+    return {"attacker": attacker_odds, "defender": defender_odds, "draw": draw}
